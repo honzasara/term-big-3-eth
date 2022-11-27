@@ -1,0 +1,6 @@
+#ifndef GLOBALH_USER_SETTINGS
+#define GLOBALH_USER_SETTINGS
+
+
+
+#endif
