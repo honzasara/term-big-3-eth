@@ -82,18 +82,41 @@ void outputs_variable_init(void)
       }
 }
 
-
-
-void output_get_name_eeprom(uint8_t idx, char *name)
+void outputs_start_init(void)
 {
-  for (uint8_t i = 0; i < 9; i++)
-  {
-    name[i] = EEPROM.read(output0 + (idx * output_store_size_byte) + i);
-    name[i + 1] = 0;
-  }
+    struct_output output;
+    for (uint8_t idx = 0; idx < MAX_OUTPUT; idx++)
+        {
+        output_get_all_no_name(idx, &output);
+        output_set_function(output.id, output.after_start_mode, output.after_start_state);
+        }
 }
+
+uint8_t output_get_name_eeprom(uint8_t idx, char *name)
+{
+  uint8_t data[VIRTUAL_OUTPUT_MAX_NAME];
+  if (EEPROM.read_array(output0 + (idx * output_store_size_byte), VIRTUAL_OUTPUT_MAX_NAME, data) == true)
+    {
+    for (uint8_t idx = 0; idx < VIRTUAL_OUTPUT_MAX_NAME; idx++)
+	{
+	name[idx] = 0;
+	}
+
+    for (uint8_t idx = 0; idx < VIRTUAL_OUTPUT_MAX_NAME; idx++)
+	{
+	name[idx] = data[idx];
+	if (name[idx] == 0)
+            break;
+	}
+    name[VIRTUAL_OUTPUT_MAX_NAME-1] = 0;
+    return true;
+    }
+  return false;
+}
+
 void output_set_name_eeprom(uint8_t idx, char *name)
 {
+  name[9] = 0;
   for (uint8_t i = 0; i < 10; i++)
   {
     EEPROM.write((output0 + (idx * output_store_size_byte) + i), name[i]);
@@ -116,15 +139,16 @@ strcpy(output_sync[idx].name, name);
 ///////////////////
 void output_get_variables_eeprom(uint8_t idx, uint8_t *used, uint8_t *mode_enable, uint8_t *type, uint8_t *outputs, uint8_t *id, uint16_t *period, uint8_t *state_time_max, uint8_t *after_start_state, uint8_t *after_start_mode)
 {
-  *used = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 10);
-  *outputs = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 11);
-  *mode_enable = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 12);
-  *period = (EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 15) << 8) + EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 14);
-  *type = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 16);
-  *id = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 17);
-  *state_time_max = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 18);
-  *after_start_state = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 19);
-  *after_start_mode = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 20);
+  bool retx;
+  *used = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 10, &retx);
+  *outputs = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 11, &retx);
+  *mode_enable = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 12, &retx);
+  *period = (EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 15, &retx) << 8) + EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 14, &retx);
+  *type = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 16, &retx);
+  *id = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 17, &retx);
+  *state_time_max = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 18, &retx);
+  *after_start_state = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 19, &retx);
+  *after_start_mode = EEPROM.read((uint16_t) output0 + (idx * output_store_size_byte) + 20, &retx);
 }
 
 void output_set_variables_eeprom(uint8_t idx, uint8_t used, uint8_t mode_enable, uint8_t type, uint8_t outputs, uint8_t id, uint16_t period, uint8_t state_time_max, uint8_t after_start_state, uint8_t after_start_mode)
@@ -446,10 +470,11 @@ void update_phy_output(void)
       if (output.type == OUTPUT_TYPE_HW)
       {
 	 /// funkce 3 stavovy vypinac s casovacem. Po prekroceni casu se automaticky vystup vypina
-	 if (output.state_timer_now > output.state_time_max && output.state == POWER_OUTPUT_FIRST_TIMER && output.state == POWER_OUTPUT_SECOND_TIMER)
+	 if (output.state_timer_now > output.state_time_max && (output.state == POWER_OUTPUT_FIRST_TIMER || output.state == POWER_OUTPUT_SECOND_TIMER))
 	    {
 	     output.state = POWER_OUTPUT_OFF;
 	     output_set_all_no_name(idx, output);
+	     output_reset_state_timer(idx);
 	    }
 	 /// funkce 3 stavovy vypinac bez casovace
          if (output.state == POWER_OUTPUT_OFF)
@@ -520,12 +545,16 @@ void update_phy_output(void)
 uint8_t mode_in_mode_enable(uint8_t mode_enable, uint8_t mode)
 {
   uint8_t ret = 0;
+  /*
   for (uint8_t idx = 0; idx < 8; idx++)
     if  ((mode_enable & (1 << idx)) != 0  && (mode & (1 << idx)) != 0)
     {
       ret = 1;
       break;
     }
+  */
+    if ((mode_enable & (1 << mode)) != 0)
+        ret = 1;
   return ret;
 }
 

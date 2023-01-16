@@ -9,7 +9,7 @@
 #define output_store_size_byte 21
 
 #if !defined(output0)
-#define output0  1000
+#define output0  1500
 #endif
 
 #if !defined(MAX_OUTPUT)
@@ -19,7 +19,6 @@
 #define output_store_last output0 + (output_store_size_byte * MAX_OUTPUT)
 
 
-#pragma message( "output_store_last  = " XSTR(output_store_last))
 
 #define PERIOD_50_MS 50
 
@@ -28,9 +27,14 @@
 #define OUTPUT_REAL_MODE_PWM 2
 #define OUTPUT_REAL_MODE_DELAY 3
 #define OUTPUT_REAL_MODE_TRISTATE 4
+#define OUTPUT_REAL_MODE_LAST 5
 
+#define OUTPUT_REAL_MODE_COUNT 6
+
+#define OUTPUT_TYPE_NONE 0
 #define OUTPUT_TYPE_HW 2
 #define OUTPUT_TYPE_RS485 1
+#define OUTPUT_TYPE_COUNT 3
 
 #define POWER_OUTPUT_ERR 255
 #define POWER_OUTPUT_OFF 254
@@ -60,12 +64,14 @@
 #define POWER_OUTPUT_FIRST_TIMER 23
 #define POWER_OUTPUT_SECOND_TIMER 24
 
+#define VIRTUAL_OUTPUT_MAX_NAME 8
+
 extern uint8_t output_last;
 
-typedef struct struct_output
+struct struct_output
 {
   uint8_t used;
-  char name[8];
+  char name[VIRTUAL_OUTPUT_MAX_NAME];
   uint8_t outputs;
   uint8_t mode_enable;
   uint8_t mode_now;
@@ -162,5 +168,8 @@ void output_sync_to_eeprom_idx(uint8_t idx);
 void output_sync_from_eeprom_idx(uint8_t idx);
 
 void outputs_variable_init(void);
+
+void outputs_start_init(void);
+
 #endif
 

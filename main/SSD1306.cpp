@@ -1098,19 +1098,21 @@ void GLCD_PrintDouble(double Value, const uint32_t Tens)
 
 static void GLCD_Send(uint8_t Control, uint8_t *Data, uint8_t Length)
 {
-	esp_err_t ret;
-        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (__GLCD_I2C_Address << 1) | WRITE_BIT, ACK_CHECK_EN);
-        i2c_master_write_byte(cmd, Control, ACK_CHECK_EN);
-	i2c_master_write(cmd, Data, Length, ACK_CHECK_EN);
-        i2c_master_stop(cmd);
-        ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-        i2c_cmd_link_delete(cmd);
-        if (ret == ESP_OK)
-                 __GLCD.Status = GLCD_Ok;
-        else
-                 __GLCD.Status = GLCD_Error;
+    esp_err_t ret;
+    uint8_t *buff;	
+    buff = (uint8_t*) malloc(Length + 1 * sizeof(uint8_t));
+    buff[0] = Control;
+    for (uint8_t idx = 0; idx< Length; idx++)
+    	buff[idx+1] = Data[idx];
+    
+    ret = i2c_master_write_to_device(i2c_num, __GLCD_I2C_Address, buff, Length + 1, 100 / portTICK_RATE_MS);
+    
+    free(buff);
+    
+    if (ret == ESP_OK)
+             __GLCD.Status = GLCD_Ok;
+    else
+             __GLCD.Status = GLCD_Error;
 
 }
 

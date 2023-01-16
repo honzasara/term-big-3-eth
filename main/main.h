@@ -1,4 +1,5 @@
 #include "driver/i2c.h"
+#include "esp_netif.h"
 
 #ifndef GLOBALH_INCLUDED
 #define GLOBALH_INCLUDED
@@ -14,6 +15,17 @@
 #define ENC28J60_SPI_CLOCK_MHZ 16
 #define ENC28J60_INT_GPIO 15
 
+#define BUTTON_PRESSED 1
+#define BUTTON_RELEASED 0
+#define BUTTON_HOLD 2
+#define BUTTON_NONE 0
+
+#define BUTTON_UP GPIO_NUM_27
+#define BUTTON_DOWN GPIO_NUM_14
+#define BUTTON_ENTER GPIO_NUM_13
+
+#define GPIO_INPUT_PIN_SEL  ((1ULL<<BUTTON_UP) | (1ULL<<BUTTON_DOWN) | (1ULL<<BUTTON_ENTER))
+#define GPIO_OUTPUT_PIN_SEL  (0)
 
 
 #define portTICK_RATE_MS portTICK_PERIOD_MS
@@ -57,32 +69,46 @@
 #define HW_ONEWIRE_MAXROMS HW_ONEWIRE_MAXDEVICES
 
 
-#define eeprom_wire_know_rom 250 /// konci 954
+#define eeprom_wire_know_rom 300
 
-#define remote_tds_name0 1000 //// konci 1400
-#define ram_remote_tds_store_first 1400 /// konci 1480
+#define remote_tds_name0 1100
+#define ram_remote_tds_store_first 2500
 
 #define MAX_RTDS 20
 
 
 
 #define MAX_OUTPUT 32
-#define output0  1500  /// konci 2140
+#define output0  1600
 
 
 #define bootloader_tag 0
 #define set_default_values 90
 
+extern char *TAG;
 
+extern uint32_t wifi_link;
+extern uint32_t eth_link;
+extern uint32_t mqtt_link;
+
+extern esp_netif_t *eth_netif;
+extern esp_netif_t *wifi_netif;
+
+extern uint8_t use_tds;
+extern uint8_t use_rtds;
+
+uint32_t  millis(void);
 
 extern i2c_port_t i2c_num;
 esp_err_t twi_init(i2c_port_t t_i2c_num);
 
 void shiftout(uint8_t data);
 
-void send_mqtt_onewire(void);
-void send_mqtt_tds(void);
-void send_know_device(void);
+void get_device_status(void);
+
+//void send_mqtt_onewire(void);
+void send_mqtt_tds_temp(void);
+void send_mqtt_tds_all(void);
 void send_device_status(void);
 void send_mqtt_remote_tds_status(void);
 void send_mqtt_outputs(void);
@@ -94,11 +120,12 @@ bool mqtt_reconnect(void);
 
 uint8_t mode_in_mode_enable(uint8_t mode_enable, uint8_t mode);
 void output_set_function(uint8_t id, uint8_t mode, uint8_t args);
-
+uint8_t send_mqtt_outputs_virtual_id(uint8_t id);
 
 void get_sha256_of_partitions(void);
 void print_sha256(const uint8_t *image_hash, const char *label);
 void ota_task(void *pvParameter);
+
 
 typedef struct
   {

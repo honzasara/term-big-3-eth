@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include "esp_err.h"
+#include "esp_log.h"
 #include "pgmspace.h"
 #include "driver/i2c.h"
 #include "main.h"
